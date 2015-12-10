@@ -16,4 +16,5 @@ cabal.sandbox.config
 .stack-work/
 part1
 part2
+part1and2
 *.txt
