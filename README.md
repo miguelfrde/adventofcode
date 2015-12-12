@@ -9,7 +9,7 @@ By the way, I basically don't know Haskell... I'm trying to get better at it.
 ```
 $ brew install ghc cabal-install
 $ cabal update
-$ cabal install split PureMD5 memoize
+$ cabal install split PureMD5 memoize json
 ```
 
 ## Build and run
