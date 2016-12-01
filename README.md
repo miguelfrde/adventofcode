@@ -15,7 +15,7 @@ $ cabal install split PureMD5 memoize json
 ## Build and run
 
 ```
-$ cd problemXX
+$ cd year/problemXX
 $ make
 $ ./partX [args]
 ```
