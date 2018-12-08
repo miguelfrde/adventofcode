@@ -1,8 +1,9 @@
 # Advent of Code
 
-My solutions to the Advent of Code problems in Haskell.
+My solutions to the Advent of Code problems in Haskell (and for 2018 in Rust!).
 
 By the way, I basically don't know Haskell... I'm trying to get better at it.
+Same with Rust in 2018!
 
 ## Set up
 
