@@ -17,7 +17,6 @@ cabal.sandbox.config
 part1
 part2
 part1and2
-*.txt
 
 # Rust
 2018/**/target
