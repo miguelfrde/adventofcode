@@ -1,0 +1,6 @@
+[package]
+name = "problem05"
+version = "0.1.0"
+authors = ["Miguel Flores Ruiz de Eguino <1889916+miguelfrde@users.noreply.github.com>"]
+
+[dependencies]
