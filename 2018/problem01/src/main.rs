@@ -8,7 +8,7 @@ fn main() -> io::Result<()> {
     let f = File::open("input.txt")?;
     let reader = BufReader::new(f);
 
-    let values : Vec<i32> = reader
+    let values: Vec<i32> = reader
         .lines()
         .map(|line| line.unwrap().parse::<i32>().unwrap())
         .collect();

@@ -4,7 +4,7 @@ use std::{
     io::{self, prelude::*, BufReader},
 };
 
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq, Debug)]
 struct Node {
     children: Vec<Node>,
     metadata: Vec<u32>,
@@ -15,7 +15,7 @@ type Tree = Node;
 impl Tree {
     pub fn build(input: Vec<u32>) -> Tree {
         let mut queue = VecDeque::<u32>::from(input);
-        fn build_node (input: &mut VecDeque<u32>) -> Node {
+        fn build_node(input: &mut VecDeque<u32>) -> Node {
             let num_children = input.pop_front().unwrap();
             let num_metadata = input.pop_front().unwrap();
             let mut node = Node {
@@ -32,7 +32,6 @@ impl Tree {
         };
         build_node(&mut queue)
     }
-
 }
 
 fn part1(tree: &Tree) -> u32 {
@@ -47,7 +46,8 @@ fn part2(tree: &Tree) -> u32 {
         if node.children.is_empty() {
             return node.metadata.iter().sum::<u32>();
         }
-        node.metadata.iter()
+        node.metadata
+            .iter()
             .filter(|&&m| m > 0 && m <= node.children.len() as u32)
             .map(|m| &node.children[(m - 1) as usize])
             .map(sum_node)
@@ -60,7 +60,7 @@ fn main() -> io::Result<()> {
     let f = File::open("input.txt")?;
     let reader = BufReader::new(f);
 
-    let input : Vec<u32> = reader
+    let input: Vec<u32> = reader
         .lines()
         .next()
         .unwrap()
@@ -80,7 +80,7 @@ fn main() -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const INPUT : [u32; 16] = [2, 3, 0, 3, 10, 11, 12, 1, 1, 0, 1, 99, 2, 1, 1, 2];
+    const INPUT: [u32; 16] = [2, 3, 0, 3, 10, 11, 12, 1, 1, 0, 1, 99, 2, 1, 1, 2];
 
     #[test]
     fn test_build_tree() {
@@ -91,16 +91,14 @@ mod tests {
                     metadata: vec![10, 11, 12],
                 },
                 Node {
-                    children: vec![
-                        Node {
-                            children: vec![],
-                            metadata: vec![99]
-                        }
-                    ],
-                    metadata: vec![2]
-                }
+                    children: vec![Node {
+                        children: vec![],
+                        metadata: vec![99],
+                    }],
+                    metadata: vec![2],
+                },
             ],
-            metadata: vec![1, 1, 2]
+            metadata: vec![1, 1, 2],
         };
         assert_eq!(tree, Tree::build(INPUT.to_vec()));
     }

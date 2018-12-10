@@ -7,40 +7,39 @@ use std::{
 
 fn part2(polymer: &str) -> Option<usize> {
     let chars = HashSet::<char>::from_iter(polymer.to_lowercase().chars());
-    chars.iter().map(|to_strip| {
-        let simple : String = polymer
-            .chars()
-            .filter(|&c| !c.eq_ignore_ascii_case(to_strip))
-            .collect();
-        part1(&simple)
-    }).min()
+    chars
+        .iter()
+        .map(|to_strip| {
+            let simple: String = polymer
+                .chars()
+                .filter(|&c| !c.eq_ignore_ascii_case(to_strip))
+                .collect();
+            part1(&simple)
+        })
+        .min()
 }
 
 fn part1(polymer: &str) -> usize {
-	polymer.chars().fold(
-        Vec::<char>::new(),
-        |mut res, unit| {
+    polymer
+        .chars()
+        .fold(Vec::<char>::new(), |mut res, unit| {
             if let Some(&c) = res.last() {
-              if c != unit && c.eq_ignore_ascii_case(&unit) {
-                res.pop();
-                return res;
-              }
+                if c != unit && c.eq_ignore_ascii_case(&unit) {
+                    res.pop();
+                    return res;
+                }
             }
             res.push(unit);
             res
-        }
-    ).len()
+        })
+        .len()
 }
 
 fn main() -> io::Result<()> {
     let f = File::open("input.txt")?;
     let reader = BufReader::new(f);
 
-    let polymer : String = reader
-        .lines()
-        .next()
-        .unwrap()
-        .unwrap();
+    let polymer: String = reader.lines().next().unwrap().unwrap();
 
     println!("Part 1: {}", part1(&polymer));
     println!("Part 2: {}", part2(&polymer).unwrap());
