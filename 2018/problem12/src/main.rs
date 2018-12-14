@@ -1,126 +1,63 @@
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     fs::File,
     io::{self, prelude::*, BufReader},
-    str::FromStr,
 };
 
-#[derive(Hash, Eq, PartialEq, Debug)]
-struct Note {
-    rule: String,
-    result: char,
-}
+type Pot = (i32, bool);
 
-#[derive(Debug)]
-enum ParseError {
-    Error,
-}
-
-#[derive(PartialEq, Clone, Debug)]
-struct Pot {
-    state: char,
-    index: i32,
-}
-
-#[derive(PartialEq, Debug)]
-struct PotState {
-    pots: Vec<Pot>,
-}
-
-impl PotState {
-    pub fn new(pots: Vec<char>) -> Self {
-        PotState {
-            pots: pots
-                .iter()
-                .enumerate()
-                .map(|(i, s)| Pot {
-                    state: *s,
-                    index: i as i32,
-                })
-                .collect(),
-        }
+pub fn advance_generation(prev_pots: Vec<Pot>, notes: &HashMap<Vec<bool>, bool>) -> Vec<Pot> {
+    // Prepend and append some pots with negative and positive indeces.
+    let mut pots = prev_pots;
+    for _ in 0..3 {
+        pots.insert(0, (pots[0].0 - 1, false));
+        pots.push((pots[pots.len() - 1].0 + 1, false));
     }
-
-    pub fn advance_generation(&mut self, notes: &HashSet<Note>) -> PotState {
-        // Prepend and append some pots with negative and positive indeces.
-        for _ in 0..5 {
-            self.pots.insert(
-                0,
-                Pot {
-                    state: '.',
-                    index: self.pots[0].index - 1,
-                },
-            );
-            self.pots.push(Pot {
-                state: '.',
-                index: self.pots[self.pots.len() - 1].index + 1,
-            });
-        }
-        let pots : Vec<Pot> = self
-                .pots
-                .iter()
-                .enumerate()
-                .map(|(i, pot)| {
-                    if i < 2 || i >= self.pots.len() - 2 {
-                        return pot.clone();
-                    }
-                    let state = match notes.iter().find(|note| note.rule == self.pot_as_note(i)) {
-                        Some(note) => note.result,
-                        None => '.',
-                    };
-                    return Pot {
-                        state: state,
-                        index: pot.index,
-                    };
-                })
-                .collect();
-        let min = pots.iter().enumerate().find(|(_, p)| p.state == '#').unwrap().0;
-        let max = pots.iter().enumerate().rev().find(|(_, p)| p.state == '#').unwrap().0;
-        PotState { pots: pots[min..=max].to_vec() }
-    }
-
-    fn pot_as_note(&self, index: usize) -> String {
-        (index - 2..=index + 2)
-            .map(|i| self.pots[i].state)
-            .collect()
-    }
+    let result : Vec<Pot> = pots
+            .iter()
+            .enumerate()
+            .map(|(i, &(index, value))| {
+                if i < 2 || i >= pots.len() - 2 {
+                    return (index, value);
+                }
+                let new_state = notes
+                    .get(&pot_as_note(&pots, i))
+                    .unwrap_or(&false);
+                (index, *new_state)
+            })
+            .collect();
+    // This cleanup speeds things up even when it requires to store the index per element.
+    let min = result.iter().enumerate().find(|(_, &(_, s))| s).unwrap().0;
+    let max = result.iter().enumerate().rev().find(|(_, &(_, s))| s).unwrap().0;
+    result[min..=max].to_vec()
 }
 
-impl FromStr for PotState {
-    type Err = ParseError;
-
-    fn from_str(repr: &str) -> Result<Self, Self::Err> {
-        if !repr.chars().all(|c| c == '#' || c == '.') {
-            return Err(ParseError::Error);
-        }
-        Ok(PotState::new(repr.chars().collect()))
-    }
+fn pot_as_note(pots: &Vec<Pot>, index: usize) -> Vec<bool> {
+    (index - 2..=index + 2)
+        .map(|i| pots[i].1)
+        .collect()
 }
 
-impl FromStr for Note {
-    type Err = ParseError;
-
-    fn from_str(repr: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = repr.split(' ').collect();
-        if parts.len() != 3 || parts[0].len() != 5 || parts[2].len() != 1 {
-            return Err(ParseError::Error);
-        }
-        Ok(Note {
-            rule: parts[0].to_string(),
-            result: parts[2].chars().next().unwrap(),
-        })
-    }
+fn state_from_str(repr: &str) -> Vec<Pot> {
+    repr.chars().enumerate().map(|(i, c)| (i as i32, c == '#')).collect()
 }
 
-fn part1(state: PotState, notes: &HashSet<Note>, generations: usize) -> i32 {
-    let mut s = state;
+fn note_from_str(repr: &str) -> (Vec<bool>, bool) {
+    let parts: Vec<&str> = repr.split(' ').collect();
+    let rule = parts[0].chars().map(|c| c == '#').collect();
+    let result = parts[2].chars().next().unwrap() == '#';
+    (rule, result)
+}
+
+fn part1(state: Vec<Pot>, notes: &HashMap<Vec<bool>, bool>, generations: usize) -> i32 {
+    let mut curr_state = state;
     for _ in 0..generations {
-        s = s.advance_generation(notes);
+        curr_state = advance_generation(curr_state, notes);
     }
-    s.pots
+    curr_state
         .iter()
-        .filter(|pot| pot.state == '#')
-        .map(|pot| pot.index)
+        .filter(|(_, s)| *s)
+        .map(|&(i, _)| i)
         .sum()
 }
 
@@ -139,14 +76,19 @@ fn main() -> io::Result<()> {
     // Skip empty line
     lines.next();
 
-    let notes: HashSet<Note> = lines
-        .map(|line| Note::from_str(&line.unwrap()).unwrap())
+    let notes: HashMap<Vec<bool>, bool> = lines
+        .map(|line| note_from_str(&line.unwrap()))
         .collect();
 
-    let state = PotState::from_str(state_repr.as_str()).unwrap();
-    println!("Part 1: {}", part1(state, &notes, 20));
-    let state = PotState::from_str(state_repr.as_str()).unwrap();
-    println!("Part 1: {}", part1(state, &notes, 50000000000));
+    let state = state_from_str(state_repr.as_str());
+    println!("Part 1: {}", part1(state.clone(), &notes, 20));
+    let state = state_from_str(state_repr.as_str());
+    // Notice the pattern for 50b
+    println!("Part 2(500): {}", part1(state.clone(), &notes, 500));
+    println!("Part 2(5000): {}", part1(state.clone(), &notes, 5000));
+    println!("Part 2(50000): {}", part1(state.clone(), &notes, 50000));
+    println!("Part 2(500000): {}", part1(state.clone(), &notes, 500000));
+    //println!("Part 1: {}", part1(state, &notes, 50000000000));
 
     Ok(())
 }
@@ -158,42 +100,35 @@ mod tests {
     #[test]
     fn test_note_from_str() {
         assert_eq!(
-            Note {
-                rule: "...##".to_string(),
-                result: '#'
-            },
-            Note::from_str("...## => #").unwrap()
+            (vec![false, false, false, true, true], true),
+            note_from_str("...## => #"),
         );
         assert_eq!(
-            Note {
-                rule: ".####".to_string(),
-                result: '.'
-            },
-            Note::from_str(".#### => .").unwrap()
+            (vec![false, true, true, true, true], false),
+            note_from_str(".#### => ."),
         );
     }
 
     #[test]
     fn test_pot_list_from_str() {
-        let pot = |p, i| Pot { state: p, index: i };
         assert_eq!(
             PotState {
                 pots: vec![
-                    pot('#', 0),
-                    pot('#', 1),
-                    pot('.', 2),
-                    pot('#', 3),
-                    pot('.', 4)
+                    (0, true),
+                    (1, true),
+                    (2, false),
+                    (3, true),
+                    (4, false),
                 ]
             },
-            PotState::from_str("##.#.").unwrap()
+            PotState::from_str("##.#.").unwrap(),
         );
     }
 
     #[test]
     fn test_part1() {
-        let state = PotState::from_str("#..#.#..##......###...###").unwrap();
-        let notes: HashSet<Note> = vec![
+        let state = state_from_str("#..#.#..##......###...###").unwrap();
+        let notes: HashMap<Vec<bool>, bool> = vec![
             "...## => #",
             "..#.. => #",
             ".#... => #",
@@ -210,7 +145,7 @@ mod tests {
             "####. => #",
         ]
         .iter()
-        .map(|repr| Note::from_str(repr).unwrap())
+        .map(|repr| note_from_str(repr))
         .collect();
         assert_eq!(325, part1(state, &notes, 20));
     }
