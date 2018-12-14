@@ -13,33 +13,38 @@ pub fn advance_generation(prev_pots: Vec<Pot>, notes: &HashMap<Vec<bool>, bool>)
         pots.insert(0, (pots[0].0 - 1, false));
         pots.push((pots[pots.len() - 1].0 + 1, false));
     }
-    let result : Vec<Pot> = pots
-            .iter()
-            .enumerate()
-            .map(|(i, &(index, value))| {
-                if i < 2 || i >= pots.len() - 2 {
-                    return (index, value);
-                }
-                let new_state = notes
-                    .get(&pot_as_note(&pots, i))
-                    .unwrap_or(&false);
-                (index, *new_state)
-            })
-            .collect();
+    let result: Vec<Pot> = pots
+        .iter()
+        .enumerate()
+        .map(|(i, &(index, value))| {
+            if i < 2 || i >= pots.len() - 2 {
+                return (index, value);
+            }
+            let new_state = notes.get(&pot_as_note(&pots, i)).unwrap_or(&false);
+            (index, *new_state)
+        })
+        .collect();
     // This cleanup speeds things up even when it requires to store the index per element.
     let min = result.iter().enumerate().find(|(_, &(_, s))| s).unwrap().0;
-    let max = result.iter().enumerate().rev().find(|(_, &(_, s))| s).unwrap().0;
+    let max = result
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_, &(_, s))| s)
+        .unwrap()
+        .0;
     result[min..=max].to_vec()
 }
 
 fn pot_as_note(pots: &Vec<Pot>, index: usize) -> Vec<bool> {
-    (index - 2..=index + 2)
-        .map(|i| pots[i].1)
-        .collect()
+    (index - 2..=index + 2).map(|i| pots[i].1).collect()
 }
 
 fn state_from_str(repr: &str) -> Vec<Pot> {
-    repr.chars().enumerate().map(|(i, c)| (i as i32, c == '#')).collect()
+    repr.chars()
+        .enumerate()
+        .map(|(i, c)| (i as i32, c == '#'))
+        .collect()
 }
 
 fn note_from_str(repr: &str) -> (Vec<bool>, bool) {
@@ -54,11 +59,7 @@ fn part1(state: Vec<Pot>, notes: &HashMap<Vec<bool>, bool>, generations: usize) 
     for _ in 0..generations {
         curr_state = advance_generation(curr_state, notes);
     }
-    curr_state
-        .iter()
-        .filter(|(_, s)| *s)
-        .map(|&(i, _)| i)
-        .sum()
+    curr_state.iter().filter(|(_, s)| *s).map(|&(i, _)| i).sum()
 }
 
 fn main() -> io::Result<()> {
@@ -76,9 +77,7 @@ fn main() -> io::Result<()> {
     // Skip empty line
     lines.next();
 
-    let notes: HashMap<Vec<bool>, bool> = lines
-        .map(|line| note_from_str(&line.unwrap()))
-        .collect();
+    let notes: HashMap<Vec<bool>, bool> = lines.map(|line| note_from_str(&line.unwrap())).collect();
 
     let state = state_from_str(state_repr.as_str());
     println!("Part 1: {}", part1(state.clone(), &notes, 20));
@@ -113,13 +112,7 @@ mod tests {
     fn test_pot_list_from_str() {
         assert_eq!(
             PotState {
-                pots: vec![
-                    (0, true),
-                    (1, true),
-                    (2, false),
-                    (3, true),
-                    (4, false),
-                ]
+                pots: vec![(0, true), (1, true), (2, false), (3, true), (4, false),]
             },
             PotState::from_str("##.#.").unwrap(),
         );
