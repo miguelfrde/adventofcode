@@ -10,7 +10,7 @@ Same with Rust in 2018!
 ```
 $ brew install ghc cabal-install
 $ cabal update
-$ cabal install split PureMD5 memoize json
+$ cabal install split PureMD5 memoize json vector
 ```
 
 ## Build and run
