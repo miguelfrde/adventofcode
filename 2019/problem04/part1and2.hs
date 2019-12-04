@@ -1,38 +1,22 @@
-import Data.List (sort)
+import Data.List (group)
 import Data.List.Split
-import Data.Map (elems, fromListWith)
 import System.Environment
 
-pairs :: [Int] -> [(Int, Int)]
-pairs x = zip x . tail $ x
+increasing :: [Char] -> Bool
+increasing cs = all (== True) . zipWith (<=) cs . tail $ cs
 
-digits :: Int -> [Int]
-digits = reverse . digits'
-  where digits' x
-          | x < 10 = [x]
-          | otherwise = (x `mod` 10):(digits' (x `div` 10))
-
-isSorted :: [Int] -> Bool
-isSorted x = (== x) . sort $ x
-
-hasPairs :: [Int] -> Bool
-hasPairs = any (== True) . map (\(a, b) -> a == b) . pairs
-
-hasOnePairs :: [Int] -> Bool
-hasOnePairs x = any (==1) occurences
-  where existingPairs = filter (\(a, b) -> a == b ) . pairs $ x
-        occurences = elems . fromListWith (+) $ [(x, 1) | x <- existingPairs]
-
-solve :: [[Int] -> Bool] -> String -> Int
-solve conditions input = length  . filter isValid . map digits $ [a..b]
-  where [a, b] = map read . splitOn "-" $ input
-        isValid x = all (== True) . map (\f -> f x) $ conditions
+solve :: (Int -> Bool) -> String -> Int
+solve predicate input = length . filter (any predicate) . map groupLengths $ candidates
+  where [a, b] = map toInt . splitOn "-" $ input
+        toInt = read::String->Int
+        candidates = filter increasing . map show $ [a..b]
+        groupLengths = map length . group
 
 solve1 :: String -> Int
-solve1 = solve [hasPairs, isSorted]
+solve1 = solve (>= 2)
 
 solve2 :: String -> Int
-solve2 = solve [hasOnePairs, isSorted]
+solve2 = solve (== 2)
 
 main :: IO ()
 main = do
