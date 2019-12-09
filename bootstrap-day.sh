@@ -19,7 +19,6 @@ readme="# Day ${2}: <ADD TITLE>
 
 mkdir "$directory"
 mkdir "$directory/tests"
-ln -s Makefile $directory/Makefile
+cp Makefile $directory/Makefile
 echo "$readme" > $directory/README.md
-echo "$template" >  $directory/part1.hs
-echo "$template" > $directory/part2.hs
+echo "$template" >  $directory/solve.hs
