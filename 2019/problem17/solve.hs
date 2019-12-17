@@ -126,33 +126,6 @@ exec vm = case execute vm of
     StepInput f -> EffectInput (exec . f)
     StepOutput o vm' -> EffectOutput o (exec vm')
 
-bfs :: (Ord a)
-  => (a -> Set.Set a)  -- get neighbors
-  -> (a -> Bool) -- validate exit criteria
-  -> a  -- start
-  -> [a]  -- result
-bfs neighborsFn valid start = bfs' [(start, [])] Set.empty
-  where
-    bfs' [] _ = []
-    bfs' ((x, xs):queue) visited
-      | valid x = reverse (x:xs)
-      | Set.member x visited = bfs' queue visited
-      | otherwise = bfs' (queue ++ neighborQueue) (Set.insert x visited)
-      where xNeighbors = neighborsFn x
-            neighborQueue = map (\n -> (n, x:xs)) . Set.elems $ xNeighbors
-
-dfs :: (Ord a)
-  => (a -> Set.Set a) -- get neighbors
-  -> a  -- start
-  -> Set.Set a  -- result
-dfs neighborFn from = dfs' from Set.empty
-  where
-   dfs' curr visited
-     | elem curr visited = visited
-     | null nexts = Set.insert curr visited
-     | otherwise = foldl (\acc n -> dfs' n acc) (Set.insert curr visited) nexts
-     where nexts = neighborFn curr
-
 data Node = Scaffold | Empty deriving (Show, Eq, Ord);
 
 type ScaffoldMap = Map.Map (Integer, Integer) Node;
@@ -200,29 +173,116 @@ isScaffold m x = Map.lookup x m == (Just Scaffold)
 adjacent :: (Integer,Integer) -> [(Integer,Integer)]
 adjacent (x,y) = [(x,y),(x-1,y),(x+1,y),(x,y-1),(x,y+1)]
 
-findIntersections :: Map.Map (Integer, Integer) Node -> Integer
+findIntersections :: Map.Map (Integer, Integer) Node -> [(Integer, Integer)]
 findIntersections m = find' (Map.keys m) 0
   where find' [] acc = acc
         find' ((x, y):rest) acc
-          | allBelong = find' rest (acc + x*y)
+          | allBelong = find' rest (x,y):acc
           | otherwise = find' rest acc
           where allBelong = and [isScaffold m x | x <- (x,y):(adjacent (x,y)) ]
 
+data Turn = TurnLeft | TurnRight | Forward Integer deriving (Show, Eq, Ord);
 
+bfs :: (Ord a)
+  => (a -> Set.Set a)  -- get neighbors
+  -> (a -> Bool) -- validate exit criteria
+  -> (a -> Bool) -- whether or not a state has been visited
+  -> (a -> a) -- visit state
+  -> a  -- start
+  -> [a]  -- result
+bfs neighborsFn valid canVisit visit start = bfs' [(start, [])] Set.empty
+  where
+    bfs' [] _ = []
+    bfs' ((x, xs):queue) visited
+      | valid x = reverse (x:xs)
+      | not . canVisit $ x = bfs' queue visited
+      | otherwise = bfs' (queue ++ neighborQueue)
+      where xNeighbors = neighborsFn x
+            x' = visit x
+            neighborQueue = map (\n -> (n, x':xs)) . Set.elems $ xNeighbors
+
+displayTurn :: Turn -> String
+displayTurn TurnLeft = "L"
+displayTurn TurnRight = "R"
+displayTurn (Forward n) = show n
+
+displayDirs :: [Turn] -> [String]
+displayDirs = reverse . display' []
+  where display' r [] = r
+        display' r [t] = (displayTurn t):r
+        display' r (t1:t2:ts) = display' ((displayTurn t1 ++ displayTurn t2):r) ts
+
+asMovements :: Direction -> [(Integer,Integer)] -> [Turn]
+asMovements dir path = tail . reverse . asMovements' dir path $ [(Forward 0)]
+  where
+    asMovements' _ [] res =  res
+    asMovements' dir ((x,y):[]) res = res
+    asMovements' dir ((x,y):rest@((x',y'):xs)) result@((Forward n):rs) =
+      let turn turnDir newDir = asMovements' newDir rest ((Forward 1):turnDir:result)
+          forward = asMovements' dir rest ((Forward (n+1)):rs)
+      in case dir of
+            Up -> if (y' < y) && (x == x') then forward
+                  else if x' > x then turn TurnRight DRight
+                  else turn TurnLeft DLeft
+            Down -> if (y' > y) && (x == x') then forward
+                    else if x' > x then turn TurnLeft DRight
+                    else turn TurnRight DLeft
+            DRight -> if (x' > x) && (y == y') then forward
+                      else if y' > y then turn TurnRight Down
+                      else turn TurnLeft Up
+            DLeft -> if (x' < x) && (y == y') then forward
+                     else if y' > y then turn TurnLeft Down
+                     else turn TurnRight Up
+
+data SearchState = SearchState {
+    current :: (Integer, Integer)
+    visited :: Set.Set (Integer, Integer)
+    interesctionCount :: Map.Map (Integer, Integer) Int
+
+} deriving (Show, Eq, Ord)
+
+-- TODO: this could be more efficient
 findPath :: State -> [(Integer,Integer)]
-findPath state@State{..} = bfs neighbors success $ robot
-  where success p = p == (28,12)
-        neighbors p = Set.fromList [c | c <- adjacent p, isScaffold coord c]
+findPath state@State{..} = fromJust . bfs neighbors success canVisit vist $ initial
+  where
+    intersections = findIntersections . coord $ state
+    initial = SearchState {
+        pos = robot,
+        visited = Set.empty,
+        intersectionCount = Map.fromList . map (\i -> (i, 0)) $ intersections
+        }
+
+    -- Visiting a state means marking it as visited and increasing the intersection count if it's
+    -- an intersection
+    visit s@SearchState{..} = s{ current = }
+
+    -- A state can be visited if: it's not an interesection and hasn't been visited,
+    -- it's an intersection and has been visited at most once.
+    canVisit s@SearchState{..}
+
+    -- Success means we found the target and the path includes all nodes.
+    success p = p == (28,12) && (length p) == (. length . filter (==Scaffold) . Map.elems $ coord)
+
+    -- All neighboring scaffolds
+    neighbors p = Set.fromList [c | c <- adjacent p, isScaffold coord c]
 
 solve :: String -> Integer
-solve input = findIntersections . coord $ state
+solve input = sum . map (\(x, y) -> x*y) . findIntersections . coord $ state
   where startup = parseNumberList $ input
         vm = loadProgram startup
         state = loadMap vm
+
+solve2 :: String -> [Turn]
+solve2 input = asMovements (direction state) . findPath $ state
+  where startup = parseNumberList $ input
+        vm = loadProgram startup
+        state = loadMap vm
+        --state = loadMap vm{mem = save mem 0 2}
 
 main :: IO ()
 main = do
   [f] <- getArgs
   content <- readFile f
-  putStrLn . show . solve $ content
+  --putStrLn . show . solve $ content
   putStrLn . display . loadMap . loadProgram . parseNumberList $ content
+  putStrLn . show . displayDirs . solve2 $ content
