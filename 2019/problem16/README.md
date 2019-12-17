@@ -83,7 +83,6 @@ After 100 phases of FFT, what are the first eight digits in the final output lis
 
 
 ## Part Two
-
 Now that your FFT is working, you can decode the real signal.
 
 The real signal is your puzzle input repeated 10000 times. Treat this new signal as a single input list. Patterns are still calculated as before, and 100 phases of FFT are still applied.
@@ -97,5 +96,4 @@ Here is the eight-digit message in the final output list after 100 phases. The m
 02935109699940807407585447034323 becomes 78725270.
 03081770884921959731165446850517 becomes 53553731.
 ```
-
 After repeating your input signal 10000 times and running 100 phases of FFT, what is the eight-digit message embedded in the final output list?

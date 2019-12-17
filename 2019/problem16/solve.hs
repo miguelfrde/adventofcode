@@ -30,11 +30,12 @@ number = number' 0 0 . reverse
 solve :: String -> String
 solve = concat . map show . take 8 . evolve 100 . loadSignal
 
--- TODO
 solve2 :: String -> String
-solve2 input = concat . map show . take 8 . drop skip $ result
-  where result = evolve 100 . concat . replicate 10000 . loadSignal $ input
-        skip = number . take 7 $ result
+solve2 input = concat . map show . take 8 . head . drop 100 . iterate f $ signal'
+  where signal = loadSignal input
+        f s = reverse . scanl (\x y -> (abs (x + y)) `mod` 10) 0 . reverse $ s
+        offset = number . take 7 $ signal
+        signal' = drop offset . concat . replicate 10000 $ signal
 
 main :: IO ()
 main = do
